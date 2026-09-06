@@ -86,7 +86,6 @@ export function Home() {
               <strong>Dispositivos</strong>
               <p>Alta, edición y borrado de tus aparatos electrónicos.</p>
             </div>
-            <span className="sidebar-badge">Pronto</span>
           </li>
           <li>
             <span className="feature-icon">
