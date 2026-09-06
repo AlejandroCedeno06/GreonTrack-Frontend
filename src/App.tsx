@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Home } from './pages/Home';
 import { Devices } from './pages/Devices';
+import { DeviceForm } from './pages/DeviceForm';
 
 export default function App() {
   return (
@@ -26,6 +27,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Devices />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dispositivos/nuevo"
+            element={
+              <ProtectedRoute>
+                <DeviceForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dispositivos/:id/editar"
+            element={
+              <ProtectedRoute>
+                <DeviceForm />
               </ProtectedRoute>
             }
           />

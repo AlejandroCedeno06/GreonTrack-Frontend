@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Dispositivo } from '../types/database';
-import { PlugIcon, WifiIcon, PencilIcon, TrashIcon, PlusIcon } from '../components/icons';
+import { PlugIcon, WifiIcon, PencilIcon, TrashIcon, PlusIcon, CopyIcon } from '../components/icons';
 
 // Techo de referencia (W) usado solo para escalar la barra de consumo relativo;
 // no hay horas de uso en esta tabla, así que no se puede calcular kWh/costo aquí
 // (eso vive en registros_uso / calculos, fuera del alcance de esta pantalla).
 const REFERENCIA_WATTS = 2000;
+
+// El Agente GreonTrack solo sabe monitorear laptops; ver TIPOS_DISPOSITIVO
+// en types/database.ts, donde este tipo se guarda tal cual (capitalizado).
+const TIPO_LAPTOP = 'Laptop';
 
 function nivelPotencia(watts: number): 'alto' | 'moderado' | 'eficiente' {
   if (watts > 1000) return 'alto';
@@ -16,13 +21,67 @@ function nivelPotencia(watts: number): 'alto' | 'moderado' | 'eficiente' {
   return 'eficiente';
 }
 
+interface AgentModalProps {
+  device: Dispositivo;
+  copied: boolean;
+  onCopy: () => void;
+  onClose: () => void;
+}
+
+function AgentModal({ device, copied, onCopy, onClose }: AgentModalProps) {
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="agent-modal-title">
+      <div className="modal-panel">
+        <h2 id="agent-modal-title" className="modal-title">
+          Vincula el Agente GreonTrack
+        </h2>
+        <p className="modal-subtitle">
+          Usa este código para emparejar <strong>{device.nombre}</strong> con el agente.
+        </p>
+
+        <div className="modal-code-box">
+          <span className="modal-code-text">{device.device_token}</span>
+        </div>
+        <button className="modal-copy-btn" onClick={onCopy}>
+          <CopyIcon /> {copied ? '¡Copiado!' : 'Copiar código'}
+        </button>
+
+        <ol className="modal-instructions">
+          <li className="modal-instruction-step">
+            <span className="modal-instruction-number">1</span>
+            <span>Descarga e instala el Agente GreonTrack en esta laptop.</span>
+          </li>
+          <li className="modal-instruction-step">
+            <span className="modal-instruction-number">2</span>
+            <span>
+              Corre <code>npm start</code> en una terminal.
+            </span>
+          </li>
+          <li className="modal-instruction-step">
+            <span className="modal-instruction-number">3</span>
+            <span>Cuando te pida el código de vinculación, pega este código.</span>
+          </li>
+        </ol>
+
+        <button className="modal-close-btn" onClick={onClose}>
+          Entendido
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Devices() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [devices, setDevices] = useState<Dispositivo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [modalDevice, setModalDevice] = useState<Dispositivo | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const loadDevices = async () => {
     if (!user) return;
@@ -61,6 +120,44 @@ export function Devices() {
     setDevices((prev) => prev.filter((d) => d.id !== id));
   };
 
+  const handleLinkAgent = async (device: Dispositivo) => {
+    setLinkingId(device.id);
+    setError(null);
+
+    const nuevoToken = crypto.randomUUID();
+    const { error } = await supabase
+      .from('dispositivos')
+      .update({ device_token: nuevoToken, origen: 'agente' })
+      .eq('id', device.id);
+
+    setLinkingId(null);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    const actualizado: Dispositivo = { ...device, device_token: nuevoToken, origen: 'agente' };
+    setDevices((prev) => prev.map((d) => (d.id === device.id ? actualizado : d)));
+    setModalDevice(actualizado);
+  };
+
+  const handleCopy = async () => {
+    if (!modalDevice?.device_token) return;
+    try {
+      await navigator.clipboard.writeText(modalDevice.device_token);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // el portapapeles puede no estar disponible; el código sigue visible para copiar a mano
+    }
+  };
+
+  const closeModal = () => {
+    setModalDevice(null);
+    setCopied(false);
+  };
+
   const totalWatts = devices.reduce((sum, d) => sum + d.consumo_watts_promedio, 0);
 
   return (
@@ -74,8 +171,8 @@ export function Devices() {
     >
       <div className="devices-toolbar">
         <p className="muted">Alta, edición y borrado de tus equipos electrónicos.</p>
-        <button className="btn-add" disabled title="El formulario de alta llega en la siguiente actualización">
-          <PlusIcon /> Agregar dispositivo <span className="badge-soon">Pronto</span>
+        <button className="btn-add" onClick={() => navigate('/dispositivos/nuevo')}>
+          <PlusIcon /> Agregar dispositivo
         </button>
       </div>
 
@@ -111,6 +208,8 @@ export function Devices() {
               year: 'numeric',
             });
             const isAgente = device.origen === 'agente';
+            const puedeVincularAgente =
+              device.tipo === TIPO_LAPTOP && device.origen === 'manual' && !device.device_token;
 
             return (
               <article key={device.id} className="card device-card">
@@ -124,10 +223,17 @@ export function Devices() {
                       <p className="device-card-type">{device.tipo}</p>
                     </div>
                   </div>
-                  <span className={`device-badge ${isAgente ? 'device-badge-agente' : 'device-badge-manual'}`}>
-                    {isAgente && <WifiIcon />}
-                    {isAgente ? 'Agente' : 'Manual'}
-                  </span>
+                  <div className="device-card-top-actions">
+                    <span className={`device-badge ${isAgente ? 'device-badge-agente' : 'device-badge-manual'}`}>
+                      {isAgente && <WifiIcon />}
+                      {isAgente ? 'Agente' : 'Manual'}
+                    </span>
+                    {isAgente && device.device_token && (
+                      <button className="device-view-code-btn" onClick={() => setModalDevice(device)}>
+                        Ver código
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="device-card-stats">
@@ -151,8 +257,21 @@ export function Devices() {
                   </div>
                 </div>
 
+                {puedeVincularAgente && (
+                  <button
+                    className="device-link-btn"
+                    onClick={() => handleLinkAgent(device)}
+                    disabled={linkingId === device.id}
+                  >
+                    <WifiIcon /> {linkingId === device.id ? 'Vinculando…' : 'Vincular Agente'}
+                  </button>
+                )}
+
                 <div className="device-card-actions">
-                  <button className="device-action-btn" disabled title="La edición llega en la siguiente actualización">
+                  <button
+                    className="device-action-btn"
+                    onClick={() => navigate(`/dispositivos/${device.id}/editar`)}
+                  >
                     <PencilIcon /> Editar
                   </button>
 
@@ -182,6 +301,10 @@ export function Devices() {
             );
           })}
         </div>
+      )}
+
+      {modalDevice && (
+        <AgentModal device={modalDevice} copied={copied} onCopy={handleCopy} onClose={closeModal} />
       )}
     </AppShell>
   );
