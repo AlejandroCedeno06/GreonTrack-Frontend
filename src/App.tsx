@@ -6,6 +6,7 @@ import { Register } from './pages/Register';
 import { Home } from './pages/Home';
 import { Devices } from './pages/Devices';
 import { DeviceForm } from './pages/DeviceForm';
+import { Usage } from './pages/Usage';
 
 export default function App() {
   return (
@@ -43,6 +44,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <DeviceForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/registrar-uso"
+            element={
+              <ProtectedRoute>
+                <Usage />
               </ProtectedRoute>
             }
           />

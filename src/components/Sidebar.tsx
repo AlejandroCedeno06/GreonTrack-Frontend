@@ -17,7 +17,7 @@ import {
 const NAV_ITEMS = [
   { to: '/', label: 'Inicio', icon: HomeIcon, enabled: true },
   { to: '/dispositivos', label: 'Dispositivos', icon: PlugIcon, enabled: true },
-  { to: '/registrar-uso', label: 'Registrar uso', icon: ClockIcon, enabled: false },
+  { to: '/registrar-uso', label: 'Registrar uso', icon: ClockIcon, enabled: true },
   { to: '/estadisticas', label: 'Estadísticas', icon: SparkChartIcon, enabled: false },
   { to: '/recomendaciones', label: 'Recomendaciones', icon: LightbulbIcon, enabled: false },
   { to: '/reportes', label: 'Reportes', icon: FileIcon, enabled: false },

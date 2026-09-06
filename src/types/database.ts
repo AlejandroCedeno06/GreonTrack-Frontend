@@ -49,6 +49,13 @@ export interface Recomendacion {
   fecha: string;
 }
 
+// Fila única con los valores vigentes de tarifa eléctrica y factor de emisión.
+export interface Configuracion {
+  id: string;
+  tarifa_kwh: number;
+  factor_co2: number;
+}
+
 // Tipos de dispositivo comunes, usados en el formulario de alta.
 // consumo_watts_promedio es un valor sugerido; el usuario puede ajustarlo.
 export const TIPOS_DISPOSITIVO: { tipo: string; wattsPromedio: number }[] = [
