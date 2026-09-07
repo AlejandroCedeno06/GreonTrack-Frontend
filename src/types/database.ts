@@ -1,5 +1,7 @@
 // Tipos que reflejan las tablas de supabase/schema.sql
 
+import type { InfoRegistroDispositivo } from '../lib/deviceInfo';
+
 export type Role = 'general' | 'analitico' | 'admin';
 export type Origen = 'manual' | 'agente';
 
@@ -19,6 +21,7 @@ export interface Dispositivo {
   origen: Origen;
   device_token: string | null;
   created_at: string;
+  info_registro?: InfoRegistroDispositivo | null;
 }
 
 export interface RegistroUso {
@@ -69,5 +72,40 @@ export const TIPOS_DISPOSITIVO: { tipo: string; wattsPromedio: number }[] = [
   { tipo: 'Lavadora', wattsPromedio: 500 },
   { tipo: 'Microondas', wattsPromedio: 1000 },
   { tipo: 'Foco / iluminación', wattsPromedio: 15 },
+  { tipo: 'Dispositivo IoT', wattsPromedio: 15 },
+  { tipo: 'Impresora', wattsPromedio: 30 },
   { tipo: 'Otro', wattsPromedio: 50 },
 ];
+
+// ── Sugerencias de red (GreonTrack Sniffer) ─────────────────────────────────
+// Tipos detectados por el script de escaneo (GreonTrack-Sniffer/scan_red.py).
+export type TipoDetectado =
+  | 'phone'
+  | 'laptop'
+  | 'desktop'
+  | 'tv'
+  | 'gaming'
+  | 'iot'
+  | 'printer'
+  | 'unknown';
+
+export type EstadoSugerencia = 'pendiente' | 'agregado' | 'descartado';
+
+export interface DispositivoSugerido {
+  id: string;
+  usuario_id: string;
+  ip: string;
+  mac: string;
+  vendor: string | null;
+  tipo_detectado: TipoDetectado;
+  nombre_sugerido: string;
+  watts_estimados: number;
+  estado: EstadoSugerencia;
+  fecha_deteccion: string;
+}
+
+export interface SnifferEstado {
+  usuario_id: string;
+  ultimo_sondeo: string;
+  dispositivos_detectados: number;
+}

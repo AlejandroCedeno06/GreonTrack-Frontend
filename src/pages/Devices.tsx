@@ -4,7 +4,17 @@ import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Dispositivo } from '../types/database';
-import { PlugIcon, WifiIcon, PencilIcon, TrashIcon, PlusIcon, CopyIcon } from '../components/icons';
+import {
+  PlugIcon,
+  WifiIcon,
+  PencilIcon,
+  TrashIcon,
+  PlusIcon,
+  CopyIcon,
+  MonitorIcon,
+} from '../components/icons';
+import { CATEGORIAS, categoriaDe, iconoDeTipo, Categoria } from '../lib/deviceCategories';
+import mascota from '../assets/mascota-greon-sm.png';
 
 // Techo de referencia (W) usado solo para escalar la barra de consumo relativo;
 // no hay horas de uso en esta tabla, así que no se puede calcular kWh/costo aquí
@@ -71,6 +81,122 @@ function AgentModal({ device, copied, onCopy, onClose }: AgentModalProps) {
   );
 }
 
+interface DeviceInfoModalProps {
+  device: Dispositivo;
+  onClose: () => void;
+}
+
+function DeviceInfoModal({ device, onClose }: DeviceInfoModalProps) {
+  const info = device.info_registro;
+  const fecha = info ? new Date(info.fecha).toLocaleString('es-MX') : null;
+  const esSniffer = info?.origen === 'sniffer';
+
+  return (
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="device-info-modal-title">
+      <div className="modal-panel">
+        <h2 id="device-info-modal-title" className="modal-title">
+          Info técnica
+        </h2>
+        <p className="modal-subtitle">
+          {esSniffer ? (
+            <>
+              Datos detectados en tu red para <strong>{device.nombre}</strong>.
+            </>
+          ) : (
+            <>
+              Datos del equipo usado para registrar <strong>{device.nombre}</strong>.
+            </>
+          )}
+        </p>
+
+        {!info ? (
+          <p className="muted">Este dispositivo no tiene info técnica guardada.</p>
+        ) : esSniffer ? (
+          <ul className="modal-instructions">
+            <li className="modal-instruction-step">
+              <span>
+                <strong>IP:</strong> {info.ipDispositivo ?? 'No disponible'}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>MAC:</strong> {info.mac ?? 'No disponible'}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Fabricante:</strong> {info.vendor ?? 'No disponible'}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Fecha de detección:</strong> {fecha}
+              </span>
+            </li>
+          </ul>
+        ) : (
+          <ul className="modal-instructions">
+            <li className="modal-instruction-step">
+              <span>
+                <strong>IP pública del registro:</strong> {info.ipPublicaRegistro ?? 'No disponible'}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Sistema operativo:</strong> {info.sistemaOperativo}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Navegador:</strong> {info.navegador}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Núcleos de CPU:</strong> {info.nucleosCpu ?? 'No disponible'}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Memoria aproximada:</strong>{' '}
+                {info.memoriaAproxGB != null ? `${info.memoriaAproxGB} GB` : 'No disponible'}
+              </span>
+            </li>
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Resolución de pantalla:</strong> {info.resolucionPantalla}
+              </span>
+            </li>
+            {info.ipDispositivo && (
+              <li className="modal-instruction-step">
+                <span>
+                  <strong>IP del dispositivo:</strong> {info.ipDispositivo}
+                </span>
+              </li>
+            )}
+            {info.vendor && (
+              <li className="modal-instruction-step">
+                <span>
+                  <strong>Marca:</strong> {info.vendor}
+                </span>
+              </li>
+            )}
+            <li className="modal-instruction-step">
+              <span>
+                <strong>Fecha de registro:</strong> {fecha}
+              </span>
+            </li>
+          </ul>
+        )}
+
+        <button className="modal-close-btn" onClick={onClose}>
+          Entendido
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Devices() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -82,6 +208,8 @@ export function Devices() {
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [modalDevice, setModalDevice] = useState<Dispositivo | null>(null);
   const [copied, setCopied] = useState(false);
+  const [infoModalDevice, setInfoModalDevice] = useState<Dispositivo | null>(null);
+  const [categoriaActiva, setCategoriaActiva] = useState<Categoria>('Todos');
 
   const loadDevices = async () => {
     if (!user) return;
@@ -159,6 +287,8 @@ export function Devices() {
   };
 
   const totalWatts = devices.reduce((sum, d) => sum + d.consumo_watts_promedio, 0);
+  const devicesFiltrados =
+    categoriaActiva === 'Todos' ? devices : devices.filter((d) => categoriaDe(d.tipo) === categoriaActiva);
 
   return (
     <AppShell
@@ -171,9 +301,14 @@ export function Devices() {
     >
       <div className="devices-toolbar">
         <p className="muted">Alta, edición y borrado de tus equipos electrónicos.</p>
-        <button className="btn-add" onClick={() => navigate('/dispositivos/nuevo')}>
-          <PlusIcon /> Agregar dispositivo
-        </button>
+        <div className="devices-toolbar-actions">
+          <button className="btn-add btn-add-outline" onClick={() => navigate('/dispositivos/sniffer')}>
+            <WifiIcon /> Detectar en mi red
+          </button>
+          <button className="btn-add" onClick={() => navigate('/dispositivos/nuevo')}>
+            <PlusIcon /> Agregar manualmente
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -185,21 +320,43 @@ export function Devices() {
         </div>
       )}
 
+      {!loading && devices.length > 0 && (
+        <div className="category-filter">
+          {CATEGORIAS.map((cat) => (
+            <button
+              key={cat}
+              className={`category-chip${categoriaActiva === cat ? ' active' : ''}`}
+              onClick={() => setCategoriaActiva(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <p className="muted">Cargando dispositivos…</p>
       ) : devices.length === 0 ? (
         <div className="device-empty">
-          <span className="device-empty-icon">
-            <PlugIcon />
-          </span>
+          <img src={mascota} alt="" className="device-empty-mascot" />
           <div>
             <p className="device-empty-title">Aún no tienes dispositivos</p>
             <p className="muted">Cuando agregues uno, aparecerá aquí con su consumo y origen.</p>
           </div>
         </div>
+      ) : devicesFiltrados.length === 0 ? (
+        <div className="device-empty">
+          <span className="device-empty-icon">
+            <PlugIcon />
+          </span>
+          <div>
+            <p className="device-empty-title">Nada en "{categoriaActiva}"</p>
+            <p className="muted">No tienes dispositivos registrados en esta categoría.</p>
+          </div>
+        </div>
       ) : (
         <div className="device-grid">
-          {devices.map((device) => {
+          {devicesFiltrados.map((device) => {
             const nivel = nivelPotencia(device.consumo_watts_promedio);
             const pct = Math.min(100, (device.consumo_watts_promedio / REFERENCIA_WATTS) * 100);
             const fecha = new Date(device.created_at).toLocaleDateString('es-MX', {
@@ -210,13 +367,14 @@ export function Devices() {
             const isAgente = device.origen === 'agente';
             const puedeVincularAgente =
               device.tipo === TIPO_LAPTOP && device.origen === 'manual' && !device.device_token;
+            const IconoDispositivo = iconoDeTipo(device.tipo);
 
             return (
               <article key={device.id} className="card device-card">
                 <div className="device-card-top">
                   <div className="device-card-identity">
                     <span className="device-card-icon">
-                      <PlugIcon />
+                      <IconoDispositivo />
                     </span>
                     <div className="device-card-text">
                       <p className="device-card-name">{device.nombre}</p>
@@ -268,6 +426,11 @@ export function Devices() {
                 )}
 
                 <div className="device-card-actions">
+                  {device.info_registro && (
+                    <button className="device-action-btn" onClick={() => setInfoModalDevice(device)}>
+                      <MonitorIcon /> Info técnica
+                    </button>
+                  )}
                   <button
                     className="device-action-btn"
                     onClick={() => navigate(`/dispositivos/${device.id}/editar`)}
@@ -305,6 +468,10 @@ export function Devices() {
 
       {modalDevice && (
         <AgentModal device={modalDevice} copied={copied} onCopy={handleCopy} onClose={closeModal} />
+      )}
+
+      {infoModalDevice && (
+        <DeviceInfoModal device={infoModalDevice} onClose={() => setInfoModalDevice(null)} />
       )}
     </AppShell>
   );

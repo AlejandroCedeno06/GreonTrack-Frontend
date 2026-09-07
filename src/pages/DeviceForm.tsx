@@ -4,6 +4,8 @@ import { AppShell } from '../components/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { TIPOS_DISPOSITIVO } from '../types/database';
+import { capturarInfoDispositivo } from '../lib/deviceInfo';
+import { iconoDeTipo } from '../lib/deviceCategories';
 import { ArrowLeftIcon } from '../components/icons';
 
 export function DeviceForm() {
@@ -15,6 +17,8 @@ export function DeviceForm() {
   const [nombre, setNombre] = useState('');
   const [tipo, setTipo] = useState(TIPOS_DISPOSITIVO[0].tipo);
   const [watts, setWatts] = useState(String(TIPOS_DISPOSITIVO[0].wattsPromedio));
+  const [ipDispositivo, setIpDispositivo] = useState('');
+  const [marca, setMarca] = useState('');
 
   const [loading, setLoading] = useState(isEdit);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -92,7 +96,15 @@ export function DeviceForm() {
     const { error } =
       isEdit && id
         ? await supabase.from('dispositivos').update(payload).eq('id', id)
-        : await supabase.from('dispositivos').insert({ ...payload, usuario_id: user.id, origen: 'manual' });
+        : await supabase.from('dispositivos').insert({
+            ...payload,
+            usuario_id: user.id,
+            origen: 'manual',
+            info_registro: await capturarInfoDispositivo({
+              ipDispositivo: ipDispositivo.trim() || undefined,
+              vendor: marca.trim() || undefined,
+            }),
+          });
 
     setSaving(false);
 
@@ -143,19 +155,27 @@ export function DeviceForm() {
             </div>
 
             <div className="device-form-field">
-              <label htmlFor="tipo">Tipo de dispositivo</label>
-              <select
-                id="tipo"
-                className="device-form-select"
-                value={tipo}
-                onChange={(e) => handleTipoChange(e.target.value)}
-              >
-                {TIPOS_DISPOSITIVO.map((t) => (
-                  <option key={t.tipo} value={t.tipo}>
-                    {t.tipo}
-                  </option>
-                ))}
-              </select>
+              <label>Tipo de dispositivo</label>
+              <div className="type-picker">
+                {TIPOS_DISPOSITIVO.map((t) => {
+                  const Icono = iconoDeTipo(t.tipo);
+                  const activo = tipo === t.tipo;
+                  return (
+                    <button
+                      key={t.tipo}
+                      type="button"
+                      className={`type-picker-option${activo ? ' active' : ''}`}
+                      onClick={() => handleTipoChange(t.tipo)}
+                      aria-pressed={activo}
+                    >
+                      <span className="type-picker-icon">
+                        <Icono />
+                      </span>
+                      <span className="type-picker-label">{t.tipo}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="device-form-field">
@@ -179,6 +199,34 @@ export function DeviceForm() {
                 <span className="device-form-error-text">Ingresa un número mayor a 0.</span>
               )}
             </div>
+
+            {!isEdit && (
+              <div className="device-form-optional-group">
+                <p className="device-form-optional-title">Opcional</p>
+                <div className="device-form-field">
+                  <label htmlFor="ipDispositivo">IP del dispositivo</label>
+                  <input
+                    id="ipDispositivo"
+                    type="text"
+                    className="device-form-input"
+                    value={ipDispositivo}
+                    onChange={(e) => setIpDispositivo(e.target.value)}
+                    placeholder="Ej. 192.168.1.25"
+                  />
+                </div>
+                <div className="device-form-field">
+                  <label htmlFor="marca">Marca</label>
+                  <input
+                    id="marca"
+                    type="text"
+                    className="device-form-input"
+                    value={marca}
+                    onChange={(e) => setMarca(e.target.value)}
+                    placeholder="Ej. Samsung"
+                  />
+                </div>
+              </div>
+            )}
 
             {error && <div className="alert-error">{error}</div>}
             {success && <div className="alert-success">{success}</div>}

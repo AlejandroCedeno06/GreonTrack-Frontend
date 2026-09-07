@@ -3,25 +3,35 @@ import { useAuth } from '../context/AuthContext';
 import { Avatar } from './Avatar';
 import logoIcon from '../assets/logo-icon.png';
 import logoWordmark from '../assets/logo-wordmark.png';
+import mascotaMini from '../assets/mascota-greon-sm.png';
 import {
   HomeIcon,
   PlugIcon,
   ClockIcon,
   SparkChartIcon,
+  LeafIcon,
   LightbulbIcon,
   FileIcon,
   GearIcon,
+  HelpIcon,
   LogoutIcon,
 } from './icons';
 
+function GreonNavIcon() {
+  return <img src={mascotaMini} alt="" className="sidebar-link-mascot" />;
+}
+
 const NAV_ITEMS = [
   { to: '/', label: 'Inicio', icon: HomeIcon, enabled: true },
+  { to: '/greon', label: 'Greon', icon: GreonNavIcon, enabled: true },
   { to: '/dispositivos', label: 'Dispositivos', icon: PlugIcon, enabled: true },
   { to: '/registrar-uso', label: 'Registrar uso', icon: ClockIcon, enabled: true },
-  { to: '/estadisticas', label: 'Estadísticas', icon: SparkChartIcon, enabled: false },
-  { to: '/recomendaciones', label: 'Recomendaciones', icon: LightbulbIcon, enabled: false },
-  { to: '/reportes', label: 'Reportes', icon: FileIcon, enabled: false },
-  { to: '/configuracion', label: 'Configuración', icon: GearIcon, enabled: false },
+  { to: '/estadisticas', label: 'Estadísticas', icon: SparkChartIcon, enabled: true },
+  { to: '/huella-carbono', label: 'Huella de carbono', icon: LeafIcon, enabled: true },
+  { to: '/recomendaciones', label: 'Recomendaciones', icon: LightbulbIcon, enabled: true },
+  { to: '/reportes', label: 'Reportes', icon: FileIcon, enabled: true },
+  { to: '/configuracion', label: 'Configuración', icon: GearIcon, enabled: true },
+  { to: '/guia', label: 'Guía de uso', icon: HelpIcon, enabled: true },
 ];
 
 export function Sidebar() {

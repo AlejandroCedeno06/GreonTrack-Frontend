@@ -2,9 +2,12 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../components/AuthLayout';
+import { GoogleIcon } from '../components/icons';
+import { PasswordStrength } from '../components/PasswordStrength';
+import { evaluarFortaleza } from '../lib/passwordStrength';
 
 export function Register() {
-  const { signUp, session } = useAuth();
+  const { signUp, signInWithGoogle, session } = useAuth();
   const navigate = useNavigate();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -19,8 +22,8 @@ export function Register() {
     setError(null);
     setSuccess(null);
 
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+    if (!evaluarFortaleza(password).esValida) {
+      setError('Tu contraseña no cumple con todos los requisitos de seguridad.');
       return;
     }
     if (password !== confirmPassword) {
@@ -43,6 +46,12 @@ export function Register() {
     }
 
     navigate('/');
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    const { error } = await signInWithGoogle();
+    if (error) setError(error);
   };
 
   return (
@@ -86,8 +95,9 @@ export function Register() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres, con mayúscula, número y símbolo"
           />
+          <PasswordStrength password={password} />
         </div>
 
         <div className="field">
@@ -106,10 +116,22 @@ export function Register() {
         {error && <div className="form-error">{error}</div>}
         {success && <div className="form-success">{success}</div>}
 
-        <button type="submit" className="btn-primary" disabled={loading}>
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={loading || !evaluarFortaleza(password).esValida || password !== confirmPassword}
+        >
           {loading ? 'Creando cuenta…' : 'Registrarme'}
         </button>
       </form>
+
+      <div className="auth-divider">
+        <span>o</span>
+      </div>
+
+      <button type="button" className="btn-google" onClick={handleGoogle}>
+        <GoogleIcon /> Registrarme con Google
+      </button>
 
       <p className="auth-footer">
         ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
