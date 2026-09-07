@@ -23,7 +23,7 @@ import { GreonSpace } from './pages/GreonSpace';
 export default function App() {
   return (
     <AccessibilityProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AuthProvider>
           <AppDataProvider>
             <Routes>

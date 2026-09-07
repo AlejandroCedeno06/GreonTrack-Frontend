@@ -1,0 +1,51 @@
+name: Deploy a GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          # Clave "publishable" de Supabase: está pensada para ir en el
+          # cliente (la seguridad real la da Row Level Security en la base
+          # de datos), así que es seguro tenerla aquí.
+          VITE_SUPABASE_URL: https://agvtjbhxugxndkmikhsv.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_ZqsfoW0-aAjaCmmbmbyQxg_iz4drlSP
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

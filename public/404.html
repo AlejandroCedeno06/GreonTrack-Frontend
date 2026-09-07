@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GreonTrack</title>
+    <script>
+      // GitHub Pages no sabe de rutas de React Router: cuando alguien entra
+      // directo a una URL interna (o recarga), GH Pages sirve este 404.html.
+      // Aquí codificamos la ruta pedida y redirigimos a index.html, que la
+      // restaura antes de que monte React (ver snippet en index.html).
+      var ruta = location.pathname + location.search + location.hash;
+      location.replace('/GreonTrack-Frontend/?ruta=' + encodeURIComponent(ruta));
+    </script>
+  </head>
+  <body></body>
+</html>
