@@ -15,6 +15,7 @@ import {
   GearIcon,
   HelpIcon,
   LogoutIcon,
+  CloseIcon,
 } from './icons';
 
 function GreonNavIcon() {
@@ -34,7 +35,12 @@ const NAV_ITEMS = [
   { to: '/guia', label: 'Guía de uso', icon: HelpIcon, enabled: true },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { perfil, user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -44,12 +50,21 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' sidebar-open' : ''}`} aria-label="Navegación principal">
       <div className="sidebar-decor" aria-hidden="true" />
 
       <div className="sidebar-brand">
         <img src={logoIcon} alt="" className="sidebar-icon" />
         <img src={logoWordmark} alt="GreenTrack" className="sidebar-wordmark" />
+        <button
+          type="button"
+          className="sidebar-close-btn"
+          onClick={onClose}
+          aria-label="Cerrar menú"
+          title="Cerrar menú"
+        >
+          <CloseIcon />
+        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -58,7 +73,12 @@ export function Sidebar() {
           {NAV_ITEMS.map(({ to, label, icon: Icon, enabled }) => (
             <li key={to}>
               {enabled ? (
-                <NavLink to={to} end className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+                <NavLink
+                  to={to}
+                  end
+                  className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                  onClick={onClose}
+                >
                   <span className="sidebar-link-icon">
                     <Icon />
                   </span>

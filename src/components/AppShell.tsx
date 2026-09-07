@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Avatar } from './Avatar';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,7 @@ import {
   LightbulbIcon,
   CheckIcon,
   FireIcon,
+  MenuIcon,
 } from './icons';
 
 interface AppShellProps {
@@ -26,11 +27,14 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
   const { perfil, user, signOut } = useAuth();
   const { notificaciones, racha, quitarNotificacion } = useAppData();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [notifAbierto, setNotifAbierto] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
   useEffect(() => {
     if (!menuAbierto && !notifAbierto) return;
@@ -48,6 +52,29 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
     return () => document.removeEventListener('mousedown', handleClickFuera);
   }, [menuAbierto, notifAbierto]);
 
+  // Cierra el menú lateral (móvil/tablet) cada vez que cambia de página.
+  useEffect(() => {
+    setSidebarAbierto(false);
+  }, [location.pathname]);
+
+  // Evita que el fondo haga scroll mientras el menú lateral está abierto en móvil.
+  useEffect(() => {
+    document.body.style.overflow = sidebarAbierto ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [sidebarAbierto]);
+
+  // Permite cerrar el menú lateral con la tecla Escape.
+  useEffect(() => {
+    if (!sidebarAbierto) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarAbierto(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [sidebarAbierto]);
+
   const irAConfiguracion = () => {
     setMenuAbierto(false);
     navigate('/configuracion');
@@ -61,15 +88,32 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar isOpen={sidebarAbierto} onClose={() => setSidebarAbierto(false)} />
+
+      {sidebarAbierto && (
+        <div className="sidebar-overlay" onClick={() => setSidebarAbierto(false)} aria-hidden="true" />
+      )}
 
       <div className="content">
         <div className="content-decor" aria-hidden="true" />
 
         <header className="content-header">
-          <div>
-            <h1 className="content-title">{title}</h1>
-            {subtitle && <p className="content-subtitle">{subtitle}</p>}
+          <div className="content-header-left">
+            <button
+              type="button"
+              className="hamburger-btn"
+              onClick={() => setSidebarAbierto((v) => !v)}
+              aria-label="Abrir menú"
+              aria-haspopup="true"
+              aria-expanded={sidebarAbierto}
+            >
+              <MenuIcon />
+            </button>
+
+            <div>
+              <h1 className="content-title">{title}</h1>
+              {subtitle && <p className="content-subtitle">{subtitle}</p>}
+            </div>
           </div>
 
           <div className="content-header-actions">
