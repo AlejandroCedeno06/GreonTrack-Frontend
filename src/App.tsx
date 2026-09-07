@@ -135,11 +135,11 @@ export default function App() {
               />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <MascotWidget />
           </AppDataProvider>
         </AuthProvider>
       </BrowserRouter>
       <AccessibilityWidget />
-      <MascotWidget />
     </AccessibilityProvider>
   );
 }
